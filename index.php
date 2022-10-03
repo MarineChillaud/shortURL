@@ -1,35 +1,72 @@
-<!-- IS SENDING A FORM -->
 <?php
-If(isset($_POST['url'])) {
-    // VARIABLES
+// IF RECEIVED SHORTCUT
+if(isset($_GET['q'])){
+
+    // VARIABLE
+    $shortcut = htmlspecialchars($_GET['q']);
+
+    // IS A SHORTCUT
+    $bdd = new PDO('mysql:host=localhost; dbname=bitly; charset=utf8', 'root', 'root'); 
+    
+    $req = $bdd->prepare('SELECT COUNT(*) AS x FROM links WHERE shortcut = ?');
+    $req->execute(array($shortcut));
+
+    while($result = $req->fetch()){  // tant qu'il y a une nouvelle ligne, affiche la moi dan sma variables result
+        if($result['x'] !=1){
+            header('location: ./?error=true&message=Adresse url non connue');
+            (exit);
+        }
+    }
+}
+
+// REDIRECTION - A revoir, erreur
+/* $req = $bdd->prepare('SELECT * FROM links WHERE shortcut = ?');
+$req->execute(array($shortcut));
+
+while($result = $req->fetch()){
+
+    header('location: '.$result['url']);
+    exit();
+} */
+
+// IS SENDING A FORM
+if(isset($_POST['url'])) {
+
+    // VARIABLE
     $url = $_POST['url'];
 
     // VERIFICATION
     if(!filter_var($url, FILTER_VALIDATE_URL)) {
-        // PAS UN LIEN
-        header('location: ../?error=true&message=Adresse url non valide');
+        // NOT A LINK 
+        header('location: ./?error=true&message=Adresse url non valide'); 
         exit();
     }
 	
     // SHORTCUT
-    $shortcut = crypt($url, time());
+    $shortcut = crypt($url, rand());
 
     // HAS BEEN ALREADY SEND ?
-   /* try {
-    $bdd=new PDO('mysql:host=localhost; dbname=bitly; charset=utf8', 'root', 'root');    
+   try {
+    $bdd = new PDO('mysql:host=localhost; dbname=bitly; charset=utf8', 'root', 'root');    
     } catch(Exception $e) {
-        die('Error : ' .$e ->getMessage());
+        die('Error : '.$e ->getMessage());
     }
     $req = $bdd->prepare('SELECT COUNT(*) AS x FROM links WHERE url = ?');
     $req->execute(array($url));
 
     while($result = $req->fetch()){
         if($result['x'] !=0){
-            header('location: ../?error=true&message=Adresse déjà raccourcie');
+            header('location: ./?error=true&message=Adresse déjà raccourcie');
+            exit();
         }
-    }*/
+    }
+
     // SENDING
-  
+    $req = $bdd->prepare('INSERT INTO links(url,shortcut) VALUES(?,?)');
+    $req->execute(array($url, $shortcut));
+
+    header('location: ./?short='.$shortcut);
+    exit();
 }
 ?>
 
@@ -46,28 +83,41 @@ If(isset($_POST['url'])) {
           
             <!-- PRÉSENTATION -->
             <section id="hello">
+
                 <!-- CONTAINER -->
                 <div class="container">
+
                     <!-- HEADER -->
                     <header >
                         <img src = "pictures/logo.png" alt=""logo" id="logo"></img>
                     </header>
-                    <h1>Une URL longue ? Raccourcicez là !</h1>
+
+                    <h1>Une URL longue ? Raccourcissez là !</h1>
+
                         <h2>Largement meilleur et plus court que les autres</h2>
+
                         <form method= post action="index.php"> 
                             <input type="url" name="url" placeholder="coller le lien à raccourcir">
                             <input type=submit value="Raccourcir">
                         </form>
-					        </div>
+
+                        <!-- return error message or short url -->
                         <?php if(isset($_GET["error"]) && isset($_GET["message"])) { ?>
-                            <div id="result">
+                            <div class="result">
                                 <b><?php echo htmlspecialchars($_GET["message"]); ?></b>        
+                            </div>
+                        <?php } else if(isset($_GET['short'])) { ?>
+                            <div class="result">
+                                <b>URL raccourci :</b>
+                                http://localhost/?q=<?php echo htmlspecialchars($_GET["short"]); ?>       
                             </div>
                         <?php } ?>
                 </div>
             </section>
+
             <!-- BRANDS -->
             <section id="brands">
+
                 <!-- CONTAINER-->
                 <div class="container">
                     <h3>Ces marques qui nous font confiance</h3>
@@ -77,6 +127,7 @@ If(isset($_POST['url'])) {
                     <img src=pictures/4.png alt="4" class="picture"></img>
                 </div>      
             </section>
+        
         </body>
 
         <footer>
